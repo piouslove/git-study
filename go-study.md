@@ -38,11 +38,12 @@ import (
 
 ### 函数
 * 符合规范的函数一般写成如下的形式：
-	```go
+
+```go
 func functionName(parameter_list) (return_value_list) {
    …
 }
-	```
+```
 	其中：
 	* `parameter_list` 的形式为 `(param1 type1, param2 type2, …)`
 	* `return_value_list` 的形式为 `(ret1 type1, ret2 type2, …)`
