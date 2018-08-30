@@ -37,16 +37,15 @@ import (
 （大写字母可以使用任何 Unicode 编码的字符，比如希腊文，不仅仅是 ASCII 码中的大写字母）。因此，在导入一个外部包后，能够且只能够访问该包中导出的对象。
 
 ### 函数
-* 符合规范的函数一般写成如下的形式：
+* 符合规范的函数一般写成如下的形式,其中：
+	* `parameter_list` 的形式为 `(param1 type1, param2 type2, …)`
+	* `return_value_list` 的形式为 `(ret1 type1, ret2 type2, …)`
 
 ```go
 func functionName(parameter_list) (return_value_list) {
    …
 }
 ```
-	其中：
-		* `parameter_list` 的形式为 `(param1 type1, param2 type2, …)`
-		* `return_value_list` 的形式为 `(ret1 type1, ret2 type2, …)`
 * 只有当某个函数需要被外部包调用的时候才使用大写字母开头，并遵循 [Pascal 命名法](https://baike.baidu.com/item/%E5%B8%95%E6%96%AF%E5%8D%A1%E5%91%BD%E5%90%8D%E6%B3%95/9464494?fr=aladdin)；否则就遵循[骆驼命名法](https://blog.csdn.net/f_zyj/article/details/51510085)，即第一个单词的首字母小写，其余单词的首字母大写。
 * main 函数是每一个可执行程序所必须包含的，一般来说都是在启动后第一个执行的函数（如果有 init() 函数则会先执行该函数）;main 函数既没有参数，也没有返回类型（与 C 家族中的其它语言恰好相反）。
 
