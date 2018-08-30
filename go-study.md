@@ -168,6 +168,94 @@ func main() {
 * 指针的一个高级应用是你可以传递一个变量的引用（如函数的参数），这样不会传递变量的拷贝；指针传递是很廉价的，只占用 4 个或 8 个字节；当程序在工作中需要占用大量的内存，或很多变量，或者两者都有，使用指针会减少内存占用和提高效率。
 * 对一个空指针的反向引用是不合法的，并且会使程序崩溃；注意不是编译错误。
 
+## 控制结构
+### if-else
+```go
+if condition1 {
+	// do something	
+} else if condition2 {
+	// do something else	
+} else {
+	// catch-all or default
+}
+
+if initialization; condition {
+	// do something
+}
+```
+### comma,ok 模式（pattern）
+程序应该在最接近的位置检查所有相关的错误，至少需要暗示用户有错误发生并对函数进行返回，甚至中断程序。
+```go
+value, err := pack1.Function1(param1)
+if err != nil {
+	fmt.Printf("An error occured in pack1.Function1 with parameter %v", param1)
+	return err
+}
+// 未发生错误，继续执行：
+// Or
+if err != nil {
+	fmt.Printf("Program stopping with error %v", err)
+	os.Exit(1)
+}
+// Or
+if err := file.Chmod(0664); err != nil {
+	fmt.Println(err)
+	return err
+}
+// Or ok-pattern 
+if value, ok := readData(); ok {
+…
+}
+```
+当打印到控制台时，可以将该函数返回的错误忽略；但当输出到文件流、网络流等具有不确定因素的输出对象时，应该始终检查是否有错误发生。
+### switch 结构
+```go
+switch var1 {
+	case val1:
+		...
+	case val2:
+		...
+	default:
+		...
+}
+```
+变量 var1 可以是任何类型，而 val1 和 val2 则可以是同类型的任意值。类型不被局限于常量或整数，但必须是相同的类型；或者最终结果为相同类型的表达式。前花括号 { 必须和 switch 关键字在同一行。
+
+您可以同时测试多个可能符合条件的值，使用逗号分割它们，例如：case val1, val2, val3。
+
+每一个 case 分支都是唯一的，从上至下逐一测试，直到匹配为止。（ Go 语言使用快速的查找算法来测试 switch 条件与 case 分支的匹配情况，直到算法匹配到某个 case 或者进入 default 条件为止。）
+
+一旦成功地匹配到某个分支，在执行完相应代码后就会退出整个 switch 代码块，也就是说您不需要特别使用 break 语句来表示结束。
+
+因此，程序也不会自动地去执行下一个分支的代码。如果在执行完每个分支的代码后，还希望继续执行后续分支的代码，可以使用 fallthrough 关键字来达到目的。
+
+### for 结构
+
+* 基于计数器的迭代`for 初始化语句; 条件语句; 修饰语句 {}`；特别注意，永远不要在循环体内修改计数器，这在任何语言中都是非常差的实践！尽量在修饰语句修改计数器！
+* 基于条件判断的迭代`for 条件语句 {}`。
+* 无限循环`for { }`，无限循环的经典应用是服务器，用于不断等待和接受新的请求。
+* `for-range` 结构可以迭代任何一个集合并可以获得每次迭代所对应的索引`for ix, val := range coll { }`；要注意的是，val 始终为集合中对应索引的值拷贝，因此它一般只具有只读性质，对它所做的任何修改都不会影响到集合中原有的值（译者注：如果 val 为指针，则会产生指针的拷贝，依旧可以修改集合中的原值）。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
