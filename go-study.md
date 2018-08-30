@@ -42,7 +42,7 @@ import (
 func functionName(parameter_list) (return_value_list) {
    …
 }
-```
+	```
 	其中：
 	* `parameter_list` 的形式为 `(param1 type1, param2 type2, …)`
 	* `return_value_list` 的形式为 `(ret1 type1, ret2 type2, …)`
@@ -60,7 +60,7 @@ func functionName(parameter_list) (return_value_list) {
 // Experience has shown that a small number of procedures can prove
 // helpful when attempting to save the world.
 package superman
-```
+	```
 * 几乎所有全局作用域的类型、常量、变量、函数和被导出的对象都应该有一个合理的注释；如果这种注释（称为文档注释）出现在函数前面，例如函数 Abcd，则要以 "Abcd..." 作为开头。
 	```go
 // enterOrbit causes Superman to fly into low Earth orbit, a position
@@ -68,7 +68,7 @@ package superman
 func enterOrbit() error {
    ...
 }
-```
+	```
 
 
 
