@@ -39,12 +39,12 @@ import (
 ### 函数
 * 符合规范的函数一般写成如下的形式：
 
-`go
+```go
 func functionName(parameter_list) (return_value_list) {
    …
 }
-`
-	其中：
+```
+其中：
 	* `parameter_list` 的形式为 `(param1 type1, param2 type2, …)`
 	* `return_value_list` 的形式为 `(ret1 type1, ret2 type2, …)`
 * 只有当某个函数需要被外部包调用的时候才使用大写字母开头，并遵循 [Pascal 命名法](https://baike.baidu.com/item/%E5%B8%95%E6%96%AF%E5%8D%A1%E5%91%BD%E5%90%8D%E6%B3%95/9464494?fr=aladdin)；否则就遵循[骆驼命名法](https://blog.csdn.net/f_zyj/article/details/51510085)，即第一个单词的首字母小写，其余单词的首字母大写。
@@ -55,21 +55,21 @@ func functionName(parameter_list) (return_value_list) {
 * 每一个包应该有相关注释，在 `package` 语句之前的块注释将被默认认为是这个包的文档说明，其中应该提供一些相关信息并对整体功能做简要的介绍。
 * 一个包可以分散在多个文件中，但是只需要在其中一个进行注释说明即可；当开发人员需要了解包的一些情况时，自然会用 `godoc` 来显示包的文档说明。
 * 在首行的简要注释之后可以用成段的注释来进行更详细的说明，而不必拥挤在一起；另外，在多段注释之间应以空行分隔加以区分。
-	```go
+```go
 // Package superman implements methods for saving the world.
 //
 // Experience has shown that a small number of procedures can prove
 // helpful when attempting to save the world.
 package superman
-	```
+```
 * 几乎所有全局作用域的类型、常量、变量、函数和被导出的对象都应该有一个合理的注释；如果这种注释（称为文档注释）出现在函数前面，例如函数 Abcd，则要以 "Abcd..." 作为开头。
-	```go
+```go
 // enterOrbit causes Superman to fly into low Earth orbit, a position
 // that presents several possibilities for planet salvation.
 func enterOrbit() error {
    ...
 }
-	```
+```
 
 
 
