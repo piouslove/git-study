@@ -26,7 +26,7 @@
 ## GO程序的基本结构和要素
 ### 包
 * 因式分解关键字导入，最好按照字母顺序排列包名，这样做更加清晰易读。
-	```go
+```go
 import (
    "fmt"
    "os"
@@ -79,19 +79,19 @@ func enterOrbit() error {
 * 每个值都必须在经过编译后属于某个类型（编译器必须能够推断出所有值的类型），因为 Go 语言是一种静态类型语言。
 * 由于 Go 语言不存在隐式类型转换，因此所有的转换都必须显式说明，就像调用一个函数一样（类型在这里的作用可以看作是一种函数）：`valueOfTypeB = typeB(valueOfTypeA)`
 
-### Go 程序的一般结构
-1.在完成包的 import 之后，开始对常量、变量和类型的定义或声明。
-2.如果存在 init 函数的话，则对该函数进行定义（这是一个特殊的函数，每个含有该函数的包都会首先执行这个函数）。
-3.如果当前包是 main 包，则定义 main 函数。
-4.然后定义其余的函数，首先是类型的方法，接着是按照 main 函数中先后调用的顺序来定义相关函数，如果有很多函数，则可以按照字母顺序来进行排序。
+## Go 程序的一般结构
+1. 在完成包的 import 之后，开始对常量、变量和类型的定义或声明。
+2. 如果存在 init 函数的话，则对该函数进行定义（这是一个特殊的函数，每个含有该函数的包都会首先执行这个函数）。
+3. 如果当前包是 main 包，则定义 main 函数。
+4. 然后定义其余的函数，首先是类型的方法，接着是按照 main 函数中先后调用的顺序来定义相关函数，如果有很多函数，则可以按照字母顺序来进行排序。
 
-### 常量
+## 常量
 * 因为在编译期间自定义函数均属于未知，因此无法用于常量的赋值，但内置函数可以使用，如：len()。
 * 反斜杠 `\` 可以在常量表达式中作为多行的连接符使用。
 * 每遇到一次 `const` 关键字，`iota` 就重置为 0 。
 * 常量之所以为常量就是恒定不变的量，因此我们无法在程序运行过程中修改它的值；如果你在代码中试图修改常量的值则会引发编译错误。 
 
-### 变量
+## 变量
 * 因式分解关键字的写法一般用于声明全局变量。
 * 当一个变量被声明之后，系统自动赋予它该类型的零值：int 为 0，float 为 0.0，bool 为 false，string 为空字符串，指针为 nil；所有的内存在 Go 中都是经过初始化的。
 * 一个变量（常量、类型或函数）在程序中都有一定的作用范围，称之为作用域；如果一个变量在函数体外声明，则被认为是全局变量，可以在整个包甚至外部包（被导出后）使用，不管你声明在哪个源文件里或在哪个源文件里调用该变量。
@@ -158,7 +158,7 @@ func main() {
 }
 ```
 
-### 指针
+## 指针
 * `var intP *int; intP = &i1;` `intP` 存储了 `i1` 的内存地址；它指向了 `i1` 的位置，它引用了变量 `i1`。
 * 一个指针变量可以指向任何一个值的内存地址。
 * 使用一个指针引用一个值被称为间接引用；你可以在指针类型前面加上 `*` 号（前缀）来获取指针所指向的内容，这里的 `*` 号是一个类型更改器。
@@ -236,7 +236,276 @@ switch var1 {
 * 无限循环`for { }`，无限循环的经典应用是服务器，用于不断等待和接受新的请求。
 * `for-range` 结构可以迭代任何一个集合并可以获得每次迭代所对应的索引`for ix, val := range coll { }`；要注意的是，val 始终为集合中对应索引的值拷贝，因此它一般只具有只读性质，对它所做的任何修改都不会影响到集合中原有的值（译者注：如果 val 为指针，则会产生指针的拷贝，依旧可以修改集合中的原值）。
 
+## 函数
+* 简单的 return 语句也可以用来结束 for 死循环，或者结束一个协程（goroutine）。
+* Go 里面有三种类型的函数：
+	* 普通的带有名字的函数
+	* 匿名函数或者lambda函数
+	* 方法Methods
+* 除了main()、init()函数外，其它所有类型的函数都可以有参数与返回值。
+* 函数参数、返回值以及它们的类型被统称为函数签名。
+* 函数能够接收参数供自己使用，也可以返回零个或多个值（我们通常把返回多个值称为返回一组值）；任何一个有返回值（单个或多个）的函数都必须以 return 或 panic 结尾。
+* Go 默认使用按值传递来传递参数，也就是传递参数的副本。
+* 如果你希望函数可以直接修改参数的值，而不是对参数的副本进行操作，你需要将参数的地址（变量名前面添加&符号，比如 `&variable`）传递给函数，这就是按引用传递，比如 `Function(&arg1)`，此时传递给函数的是一个指针。如果传递给函数的是一个指针，指针的值（一个地址）会被复制，但指针的值所指向的地址上的值不会被复制；我们可以通过这个指针的值来修改这个值所指向的地址上的值。（译者注：指针也是变量类型，有自己的地址和值，通常指针的值指向一个变量的地址。所以，按引用传递也是按值传递。）
+* 几乎在任何情况下，传递指针（一个32位或者64位的值）的消耗都比传递副本来得少。
+* 在函数调用时，像切片（slice）、字典（map）、接口（interface）、通道（channel）这样的引用类型都是默认使用引用传递（即使没有显式的指出指针）。
+* 尽量使用命名返回值：会使代码更清晰、更简短，同时更加容易读懂；即使只有一个命名返回值，函数签名上面也需要使用 () 括起来。
+* 传递指针给函数不但可以节省内存（因为没有复制变量的值），而且赋予了函数直接修改外部变量的能力，所以被修改的变量不再需要使用 return 返回。
+* 我们要十分小心那些可以改变外部变量的函数，在必要时，需要添加注释以便其他人能够更加清楚的知道函数里面到底发生了什么。
 
+### 变长参数
+
+* 如果函数的最后一个参数是采用 ...type 的形式，那么这个函数就可以处理一个变长的参数，这个长度可以为 0，这样的函数称为变参函数。
+* `func myFunc(a, b, arg ...int) {}` 这个函数接受一个类似某个类型的 slice 的参数。
+* 如果参数被存储在一个 slice 类型的变量 slice 中，则可以通过 slice... 的形式来传递参数，`func(slice...)`调用变参函数。
+* 变长参数可以作为对应类型的 slice 进行二次传递；一个接受变长参数的函数可以将这个参数作为其它函数的参数进行传递：
+```go
+func F1(s ...string) {
+	F2(s...)
+	F3(s)
+}
+
+func F2(s ...string) { }
+func F3(s []string) { }
+```
+* 如果变长参数的类型并不是都相同的，有 2 种方案可以解决这个问题：
+	* 使用结构，定义一个结构类型，假设它叫 Options，用以存储所有可能的参数：
+```go
+type Options struct {
+	par1 type1,
+	par2 type2,
+	...
+}
+```
+	* 使用空接口，该方案不仅可以用于长度未知的参数，还可以用于任何不确定类型的参数。
+```go
+func typecheck(..,..,values … interface{}) {
+	for _, value := range values {
+		switch v := value.(type) {
+			case int: …
+			case float: …
+			case string: …
+			case bool: …
+			default: …
+		}
+	}
+}
+```
+
+### defer和追踪
+
+* 关键字 defer 允许我们推迟到函数返回之前（或任意位置执行 return 语句之后）一刻才执行某个语句或函数（为什么要在返回之后才执行这些语句？因为 return 语句同样可以包含一些操作，而不是单纯地返回某个值）。
+* 关键字 defer 的用法类似于面向对象编程语言 Java 和 C# 的 finally 语句块，它一般用于释放某些已分配的资源。
+* 当有多个 defer 行为被注册时，它们会以逆序执行（类似栈，即后进先出）。
+* defer可以接受参数并使用当初的参数值。
+```go
+func f() {
+	for i := 0; i < 5; i++ {
+		defer fmt.Printf("%d ", i)
+	}
+}
+// 输出 4 3 2 1 0
+```
+* 关键字 defer 允许我们进行一些函数执行完成后的收尾工作，例如：
+	* 关闭文件流 
+	* 解锁一个加锁的资源 
+	* 打印最终报告
+	* 关闭数据库链接
+```go
+package main
+
+import "fmt"
+
+func main() {
+	doDBOperations()
+}
+
+func connectToDB() {
+	fmt.Println("ok, connected to db")
+}
+
+func disconnectFromDB() {
+	fmt.Println("ok, disconnected from db")
+}
+
+func doDBOperations() {
+	connectToDB()
+	fmt.Println("Defering the database disconnect.")
+	defer disconnectFromDB() //function called here with defer
+	fmt.Println("Doing some DB operations ...")
+	fmt.Println("Oops! some crash or network error ...")
+	fmt.Println("Returning from function here!")
+	return //terminate the program
+	// deferred function executed here just before actually returning, even if
+	// there is a return or abnormal termination before
+}
+
+// ok, connected to db
+// Defering the database disconnect.
+// Doing some DB operations ...
+// Oops! some crash or network error ...
+// Returning from function here!
+// ok, disconnected from db
+```
+* 使用 defer 语句实现代码追踪，一个基础但十分实用的实现代码执行追踪的方案就是在进入和离开某个函数打印相关的消息，即可以提炼为下面两个函数：
+```go
+func trace(s string) { fmt.Println("entering:", s) }
+func untrace(s string) { fmt.Println("leaving:", s) }
+```
+```go
+package main
+
+import "fmt"
+
+func trace(s string)   { fmt.Println("entering:", s) }
+func untrace(s string) { fmt.Println("leaving:", s) }
+
+func a() {
+	trace("a")
+	defer untrace("a")
+	fmt.Println("in a")
+}
+
+func b() {
+	trace("b")
+	defer untrace("b")
+	fmt.Println("in b")
+	a()
+}
+
+func main() {
+	b()
+}
+
+//  entering: b
+// in b
+// entering: a
+// in a
+// leaving: a
+// leaving: b
+```
+```go
+// 上面代码的更简便的实现版本
+package main
+
+import "fmt"
+
+func trace(s string) string {
+	fmt.Println("entering:", s)
+	return s
+}
+
+func un(s string) {
+	fmt.Println("leaving:", s)
+}
+
+func a() {
+	defer un(trace("a"))
+	fmt.Println("in a")
+}
+
+func b() {
+	defer un(trace("b"))
+	fmt.Println("in b")
+	a()
+}
+
+func main() {
+	b()
+}
+```
+* 使用 defer 语句来记录函数的参数与返回值(重点是可以记录返回值)
+```go
+package main
+
+import (
+	"io"
+	"log"
+)
+
+func func1(s string) (n int, err error) {
+	defer func() {
+		log.Printf("func1(%q) = %d, %v", s, n, err)
+	}()
+	return 7, io.EOF
+}
+
+func main() {
+	func1("Go")
+}
+
+// Output: 2011/10/04 10:46:11 func1("Go") = 7, EOF
+```
+
+### 递归函数
+* 当一个函数在其函数体内调用自身，则称之为递归。
+* 许多问题都可以使用优雅的递归来解决，比如说著名的快速排序算法。
+* 在使用递归函数时经常会遇到的一个重要问题就是栈溢出：一般出现在大量的递归调用导致的程序栈内存分配耗尽，这个问题可以通过一个名为[懒惰求值](https://zh.wikipedia.org/wiki/%E6%83%B0%E6%80%A7%E6%B1%82%E5%80%BC)的技术解决。
+* Go 语言中也可以使用相互调用的递归函数：多个函数之间相互调用形成闭环；因为 Go 语言编译器的特殊性，这些函数的声明顺序可以是任意的。
+
+### 匿名函数和闭包
+* 当我们不希望给函数起名字的时候，可以使用匿名函数，例如：`func(x, y int) int { return x + y }`。
+* 匿名函数不能够独立存在（编译器会返回错误：`non-declaration statement outside function body`），但可以被赋值于某个变量，即保存函数的地址到变量中：`fplus := func(x, y int) int { return x + y }`，然后通过变量名对函数进行调用：`fplus(3,4)`。
+* 也可以直接对匿名函数进行调用：`func(x, y int) int { return x + y } (3, 4)`。
+* 匿名函数同样被称之为闭包（函数式语言的术语）：它们被允许调用定义在其它环境下的变量。闭包可使得某个函数捕捉到一些外部状态，例如：函数被创建时的状态。另一种表示方式为：一个闭包继承了函数所声明时的作用域。这种状态（作用域内的变量）都被共享到闭包的环境中，因此这些变量可以在闭包中被操作，直到被销毁。闭包经常被用作包装函数：它们会预先定义好 1 个或多个参数以用于包装。另一个不错的应用就是使用闭包来完成更加简洁的错误检查。
+* 闭包函数保存并积累其中的变量的值，不管外部函数退出与否，它都能够继续操作外部函数中的局部变量。
+```go
+package main
+
+import "fmt"
+
+func main() {
+	var f = Adder()
+	fmt.Print(f(1), " - ")
+	fmt.Print(f(20), " - ")
+	fmt.Print(f(300))
+}
+
+func Adder() func(int) int {
+	var x int
+	return func(delta int) int {
+		x += delta
+		return x
+	}
+}
+// Output:1 - 21 - 321
+```
+* 在闭包中使用到的变量可以是在闭包函数体内声明的，也可以是在外部函数声明的：
+```go
+var g int
+go func(i int) {
+	s := 0
+	for j := 0; j < i; j++ { s += j }
+	g = s
+}(1000) // Passes argument 1000 to the function literal.
+```
+* 一个返回值为另一个函数的函数可以被称之为工厂函数，这在您需要创建一系列相似的函数的时候非常有用：书写一个工厂函数而不是针对每种情况都书写一个函数；下面的函数演示了如何动态返回追加后缀的函数：
+```go
+func MakeAddSuffix(suffix string) func(string) string {
+	return func(name string) string {
+		if !strings.HasSuffix(name, suffix) {
+			return name + suffix
+		}
+		return name
+	}
+}
+// 现在，我们可以生成如下函数：
+addBmp := MakeAddSuffix(".bmp")
+addJpeg := MakeAddSuffix(".jpeg")
+// 然后调用它们：
+addBmp("file") // returns: file.bmp
+addJpeg("file") // returns: file.jpeg
+```
+* 可以返回其它函数的函数和接受其它函数作为参数的函数均被称之为高阶函数，是函数式语言的特点。
+* 能够知道一个计算执行消耗的时间是非常有意义的，尤其是在对比和基准测试中。
+```go
+start := time.Now()
+longCalculation()
+end := time.Now()
+delta := end.Sub(start)
+fmt.Printf("longCalculation took this amount of time: %s\n", delta)
+```
+* 当在进行大量的计算时，提升性能最直接有效的一种方式就是避免重复计算；通过在内存中缓存和重复利用相同计算的结果，称之为内存缓存。
 
 
 
