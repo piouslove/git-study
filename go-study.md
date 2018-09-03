@@ -536,6 +536,107 @@ type Buffer struct {
 ```
 * 读写长度未知的 bytes 最好使用 buffer，提供 Read 和 Write 方法。
 * 通过 bytes.Buffer 串联字符串比使用 `+=` 要更节省内存和 CPU，尤其是要串联的字符串数目特别多的时候。
+* 改变切片长度的过程称之为切片重组 reslicing，切片可以反复扩展直到占据整个相关数组。
+* `func append(s[]T, x ...T) []T` 其中 `append` 方法将 0 个或多个具有相同类型 s 的元素追加到切片后面并且返回新的切片；追加的元素必须和原切片的元素同类型；如果 s 的容量不足以存储新增元素，append 会分配新的切片来保证已有切片元素和新增元素的存储；因此，返回的切片可能已经指向一个不同的相关数组了；`append` 方法总是返回成功，除非系统内存耗尽了；如果你想将切片 y 追加到切片 x 后面，只要将第二个参数扩展成一个列表即可：`x = append(x, y...)`。
+* `func copy(dst, src []T) int` copy 方法将类型为 T 的切片从源地址 src 拷贝到目标地址 dst，覆盖 dst 的相关元素，并且返回拷贝的元素个数；源地址和目标地址可能会有重叠；拷贝个数是 src 和 dst 的长度最小值；如果 src 是字符串那么元素类型就是 byte；如果你还想继续使用 src，在拷贝结束后执行 `src = dst`。
+* 字符串是由字节构建的，所以索引它们返回字节，而不是字符。字符串甚至可能不包含字符；事实上，“字符”的定义是不明确的，尝试通过定义字符串由字符组成来解决歧义是一个错误。
+* 在内存中，一个字符串实际上是一个双字结构，即一个指向实际数据的指针和记录字符串长度的整数；因为指针对用户来说是完全不可见，因此我们可以依旧把字符串看做是一个值类型，也就是一个字符数组。
+* 切片的底层指向一个数组，该数组的实际容量可能要大于切片所定义的容量；只有在没有任何切片指向的时候，底层的数组内存才会被释放，这种特性有时会导致程序占用多余的内存。
+```go
+// 函数 FindDigits 将一个文件加载到内存，然后搜索其中所有的数字并返回一个切片
+var digitRegexp = regexp.MustCompile("[0-9]+")
+
+func FindDigits(filename string) []byte {
+    b, _ := ioutil.ReadFile(filename)
+    return digitRegexp.Find(b)
+}
+// 这段代码可以顺利运行，但返回的 []byte 指向的底层是整个文件的数据。
+// 只要该返回的切片不被释放，垃圾回收器就不能释放整个文件所占用的内存。
+// 换句话说，一点点有用的数据却占用了整个文件的内存。
+// 想要避免这个问题，可以通过拷贝我们需要的部分到一个新的切片中：
+func FindDigits(filename string) []byte {
+   b, _ := ioutil.ReadFile(filename)
+   b = digitRegexp.Find(b)
+   c := make([]byte, len(b))
+   copy(c, b)
+   return c
+}
+// 上面这段代码只能找到第一个匹配正则表达式的数字串；要想找到所有的数字，可以尝试下面这段代码：
+func FindFileDigits(filename string) []byte {
+   fileBytes, _ := ioutil.ReadFile(filename)
+   b := digitRegexp.FindAll(fileBytes, len(fileBytes))
+   c := make([]byte, 0)
+   for _, bytes := range b {
+      c = append(c, bytes...)
+   }
+   return c
+}
+```
+* **[Golang字符串](https://blog.csdn.net/erlib/article/details/50907392)最全解释，必看**
+* [字符串、数组和切片的应用](https://github.com/Unknwon/the-way-to-go_ZH_CN/blob/master/eBook/07.6.md)
+
+## Map
+* `var map1 map[keytype]valuetype` 在声明的时候不需要知道 map 的长度，map 是可以动态增长的；未初始化的 map 的值是 nil。
+* key 可以是任意可以用 == 或者 != 操作符比较的类型，比如 string、int、float。所以数组、切片和结构体不能作为 key (译者注：含有数组切片的结构体不能作为 key，只包含内建类型的 struct 是可以作为 key 的），但是指针和接口类型可以；如果要用结构体作为 key 可以提供 Key() 和 Hash() 方法，这样可以通过结构体的域计算出唯一的数字或者字符串的 key。
+* value 可以是任意类型的；通过使用空接口类型，我们可以存储任意值，但是使用这种类型作为值时需要先做一次类型断言。
+* map 传递给函数的代价很小：在 32 位机器上占 4 个字节，64 位机器上占 8 个字节，无论实际上存储了多少数据。通过 key 在 map 中寻找值是很快的，比线性查找快得多，但是仍然比从数组和切片的索引中直接读取要慢 100 倍；所以如果你很在乎性能的话还是建议用切片来解决问题。
+* 令 v := map1[key1] 可以将 key1 对应的值赋值给 v；如果 map 中没有 key1 存在，那么 v 将被赋值为 map1 的值类型的空值。
+* 常用的 len(map1) 方法可以获得 map 中的 pair 数目，这个数目是可以伸缩的，因为 map-pairs 在运行时可以动态添加和删除。
+* `myMap := make(map[keytype]valuetype, capacity)`出于性能的考虑，对于大的 map 或者会快速扩张的 map，即使只是大概知道容量，也最好先标明。
+* 如果一个 key 要对应多个值，通过将 value 定义为 []int 类型或者其他类型的切片，就可以优雅的解决这个问题。
+* 判断某个 key 是否存在我们可以这么用：`val1, isPresent = map1[key1]`；isPresent 返回一个 bool 值：如果 key1 存在于 map1，val1 就是 key1 对应的 value 值，并且 isPresent为true；如果 key1 不存在，val1 就是一个空值，并且 isPresent 会返回 false。
+```go
+_, ok := map1[key1] // 如果key1存在则ok == true，否则ok为false
+
+// Or
+if _, ok := map1[key1]; ok {
+	// ...
+}
+```
+* 从 map1 中删除 key1：直接 `delete(map1, key1)` 就可以；如果 key1 不存在，该操作不会产生错误。
+* for-range 和 map 的配套用法
+```go
+for key, value := range map1 {
+	...
+}
+// 如果你只关心值，可以这么使用
+for _, value := range map1 {
+	...
+}
+// 如果只想获取 key，你可以这么使用
+for key := range map1 {
+	fmt.Printf("key is: %d\n", key)
+}
+```
+* 应当像 A 版本那样通过索引使用切片的 map 元素。在 B 版本中获得的项只是 map 值的一个拷贝而已，所以真正的 map 元素没有得到初始化。
+```go
+package main
+import "fmt"
+
+func main() {
+	// Version A:
+	items := make([]map[int]int, 5)
+	for i:= range items {
+		items[i] = make(map[int]int, 1)
+		items[i][1] = 2
+	}
+	fmt.Printf("Version A: Value of items: %v\n", items)
+
+	// Version B: NOT GOOD!
+	items2 := make([]map[int]int, 5)
+	for _, item := range items2 {
+		item = make(map[int]int, 1) // item is only a copy of the slice element.
+		item[1] = 2 // This 'item' will be lost on the next iteration.
+	}
+	fmt.Printf("Version B: Value of items: %v\n", items2)
+}
+
+// Output:
+// Version A: Value of items: [map[1:2] map[1:2] map[1:2] map[1:2] map[1:2]]
+// Version B: Value of items: [map[] map[] map[] map[] map[]]
+```
+* map 默认是无序的，不管是按照 key 还是按照 value 默认都不排序；如果你想为 map 排序，需要将 key（或者 value）拷贝到一个切片，再对切片排序。
+
 
 
 
