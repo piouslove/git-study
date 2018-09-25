@@ -766,8 +766,177 @@ t.String()
 * 如果需要在一个对象 obj 被从内存移除前执行一些特殊操作，比如写到日志文件中，可以通过如下方式调用函数来实现：`runtime.SetFinalizer(obj, func(obj *typeObj))`；`func(obj *typeObj)`需要一个 `typeObj` 类型的指针参数 `obj`，特殊操作会在它上面执行；`func` 也可以是一个匿名函数；在对象被 GC 进程选中并从内存中移除以前，`SetFinalizer` 都不会执行，即使程序正常结束或者发生错误。
 
 
+## 接口
 
+* 接口定义了一组方法（方法集），但是这些方法不包含（实现）代码：它们没有被实现（它们是抽象的）。接口里也不能包含变量。
+```go
+type Namer interface {
+    Method1(param_list) return_type
+    Method2(param_list) return_type
+    ...
+}
+```
+* （按照约定，只包含一个方法的）接口的名字由方法名加 `[e]r` 后缀组成，例如 `Printer`、`Reader`、`Writer`、`Logger`、`Converter` 等等。还有一些不常用的方式（当后缀 `er` 不合适时），比如 `Recoverable`，此时接口名以 `able` 结尾，或者以 `I` 开头（像 .NET 或 Java 中那样）。
+* Go 语言中的接口都很简短，通常它们会包含 0 个、最多 3 个方法。
+* 类型不需要显式声明它实现了某个接口：接口被隐式地实现。多个类型可以实现同一个接口。
+* 类型（比如结构体）实现接口方法集中的方法，每一个方法的实现说明了此方法是如何作用于该类型的：即实现接口，同时方法集也构成了该类型的接口。实现了 `Namer` 接口类型的变量可以赋值给 `ai` （接收者值），此时方法表中的指针会指向被实现的接口方法。当然如果另一个类型（也实现了该接口）的变量被赋值给 `ai`，这二者（译者注：指针和方法实现）也会随之改变。
+* 实现某个接口的类型（除了实现接口方法外）可以有其他的方法；一个类型可以实现多个接口。
+* 接口变量里包含了接收者实例的值和指向对应方法表的指针。
+```go
+package main
 
+import "fmt"
+
+type Shaper interface {
+	Area() float32
+}
+
+type Square struct {
+	side float32
+}
+
+func (sq *Square) Area() float32 {
+	return sq.side * sq.side
+}
+
+type Rectangle struct {
+	length, width float32
+}
+
+func (r Rectangle) Area() float32 {
+	return r.length * r.width
+}
+
+func main() {
+
+	r := Rectangle{5, 3} // Area() of Rectangle needs a value
+	q := &Square{5}      // Area() of Square needs a pointer
+	// shapes := []Shaper{Shaper(r), Shaper(q)}
+	// or shorter
+	shapes := []Shaper{r, q}
+	fmt.Println("Looping through shapes for area ...")
+	for n, _ := range shapes {
+		fmt.Println("Shape details: ", shapes[n])
+		fmt.Println("Area of this shape is: ", shapes[n].Area())
+	}
+}
+```
+* `io` 包里有一个接口类型 `Reader`:
+```go
+type Reader interface {
+    Read(p []byte) (n int, err error)
+}
+```
+那么就可以写如下的代码：
+```go
+	var r io.Reader
+
+	r = os.Stdin    // see 12.1
+	r = bufio.NewReader(r)
+	r = new(bytes.Buffer)
+	f,_ := os.Open("test.txt")
+	r = bufio.NewReader(f)
+```
+上面 `r` 右边的类型都实现了 `Read()` 方法，并且有相同的方法签名，`r` 的静态类型是 `io.Reader`。
+* 一个接口可以包含一个或多个其他的接口，这相当于直接将这些内嵌接口的方法列举在外层接口中一样；比如接口 `File` 包含了 `ReadWrite` 和 `Lock` 的所有方法，它还额外有一个 `Close()` 方法。
+```go
+type ReadWrite interface {
+    Read(b Buffer) bool
+    Write(b Buffer) bool
+}
+
+type Lock interface {
+    Lock()
+    Unlock()
+}
+
+type File interface {
+    ReadWrite
+    Lock
+    Close()
+}
+```
+
+### 类型断言
+* 一个接口类型的变量 `varI` 中可以包含任何类型的值，必须有一种方式来检测它的 动态 类型，即运行时在变量中存储的值的实际类型；通常我们可以使用 类型断言 来测试在某个时刻 `varI` 是否包含类型 `T` 的值：
+```go
+v := varI.(T)       // unchecked type assertion
+```
+`varI` 必须是一个接口变量，否则编译器会报错：`invalid type assertion: varI.(T) (non-interface type (type of varI) on left)` 。
+* 更安全的方式是使用以下形式来进行类型断言，应该总是使用下面的方式来进行类型断言；如果转换合法，`v` 是 `varI` 转换到类型 `T` 的值，`ok` 会是 `true`；否则 `v` 是类型 `T` 的零值，`ok` 是 `false`，也没有运行时错误发生。
+```go
+if v, ok := varI.(T); ok {  // checked type assertion
+    Process(v)
+    return
+}
+// varI is not of type T
+```
+* 接口变量的类型也可以使用一种特殊形式的 `switch` 来检测：`type-switch` ：
+```go
+switch t := areaIntf.(type) {
+case *Square:
+	fmt.Printf("Type Square %T with value %v\n", t, t)
+case *Circle:
+	fmt.Printf("Type Circle %T with value %v\n", t, t)
+case nil:
+	fmt.Printf("nil value: nothing to check?\n")
+default:
+	fmt.Printf("Unexpected type %T\n", t)
+}
+```
+变量 `t` 得到了 `areaIntf` 的值和类型， 所有 `case` 语句中列举的类型（`nil` 除外）都必须实现对应的接口（在上例中即 `Shaper`），如果被检测类型没有在 `case` 语句列举的类型中，就会执行 `default` 语句。
+* 可以用 `type-switch` 进行运行时类型分析，但是在 `type-switch` 不允许有 `fallthrough` 。
+* 如果仅仅是测试变量的类型，不用它的值，那么就可以不需要赋值语句，比如：
+```go
+switch areaIntf.(type) {
+case *Square:
+	// TODO
+case *Circle:
+	// TODO
+...
+default:
+	// TODO
+}
+```
+* 在处理来自于外部的、类型未知的数据时，比如解析诸如 JSON 或 XML 编码的数据，类型测试和转换会非常有用。
+* 假定 `v` 是一个值，然后我们想测试它是否实现了 `Stringer` 接口，可以这样做：
+```go
+type Stringer interface {
+    String() string
+}
+
+if sv, ok := v.(Stringer); ok {
+    fmt.Printf("v implements String(): %s\n", sv.String()) // note: sv, not v
+}
+```
+* 接口是一种契约，实现类型必须满足它，它描述了类型的行为，规定类型可以做什么；接口彻底将类型能做什么，以及如何做分离开来，使得相同接口的变量在不同的时刻表现出不同的行为，这就是多态的本质。
+
+### 方法与接口
+* 在接口上调用方法时，必须有和方法定义时相同的接收者类型或者是可以从具体类型 `P` 直接可以辨识的：
+	* 指针方法可以通过指针调用
+	* 值方法可以通过值调用
+	* 接收者是值的方法可以通过指针调用，因为指针会首先被解引用
+	* 接收者是指针的方法不可以通过值调用，因为存储在接口中的值没有地址
+* 将一个值赋值给一个接口时，编译器会确保所有可能的接口方法都可以在此值上被调用，因此不正确的赋值在编译期就会失败。
+* Go 语言规范定义了接口方法集的调用规则：
+	* 类型 `*T` 的可调用方法集包含接受者为 `*T` 或 `T` 的所有方法集
+	* 类型 `T` 的可调用方法集包含接受者为 `T` 的所有方法
+	* 类型 `T` 的可调用方法集不包含接受者为 `*T` 的方法
+
+### 空接口
+* 空接口或者最小接口 不包含任何方法，它对实现不做任何要求： `type Any interface {}` ；任何其他类型都实现了空接口（，`any` 或 `Any` 是空接口一个很好的别名或缩写。
+* 可以给一个空接口类型的变量 `var val interface {}` 赋任何类型的值。
+* 每个 `interface {}` 变量在内存中占据两个字长：一个用来存储它包含的类型，另一个用来存储它包含的数据或者指向数据的指针。
+* 数据切片和空接口切片在内存中的布局不一样，不能直接赋值或复制，必须使用 for-range 语句来一个一个显式地复制：
+```go
+var dataSlice []myType = FuncReturnSlice()
+var interfaceSlice []interface{} = make([]interface{}, len(dataSlice))
+for i, d := range dataSlice {
+    interfaceSlice[i] = d
+}
+```
+* 一个接口的值可以赋值给另一个接口变量，只要底层类型实现了必要的方法；这个转换是在运行时进行检查的，转换失败会导致一个运行时错误：这是 Go 语言动态的一面。
+* 
 
 
 
