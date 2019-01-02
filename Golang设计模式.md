@@ -199,8 +199,96 @@ fmt.Println("This is ", s2["this"])
 
 单例模式表示全局状态，大多数情况下会降低可测试性。
 
+## 结构模式
 
+### 装饰模式
 
+装饰器结构模式允许动态扩展现有对象的功能而不改变其内部状态。
+装饰器提供了一种灵活的方法来扩展对象的功能。
+
+* *Implementation*
+
+`LogDecorate` 装饰一个签名为 `func(int) int` 的函数来处理整数，并添加输入/输出日志记录功能。
+```golang
+type Object func(int) int
+
+func LogDecorate(fn Object) Object {
+    return func(n int) int {
+        log.Println("Starting the execution with the integer", n)
+
+        result := fn(n)
+
+        log.Println("Execution is completed with the result", result)
+
+        return result
+    }
+}
+```
+
+* *Usage*
+
+```golang
+func Double(n int) int {
+    return n * 2
+}
+
+f := LogDecorate(Double)
+
+f(5)
+// Starting execution with the integer 5
+// Execution is completed with the result 10
+```
+
+* *经验法则*
+
+    * 与适配器模式不同，要装饰的对象是通过注入(injection)获得的。
+    * 装饰者不应该改变对象的接口。
+
+### 代理模式
+
+代理模式提供了控制访问到另一个对象，拦截所有调用的对象。
+
+* *Implementation*
+
+代理可以为任何东西实现接口：网络连接，内存中的大对象，文件以及其他昂贵或无法复制的资源。
+简单的实例：
+
+```golang
+    // To use proxy and to object they must implement same methods
+    type IObject interface {
+        ObjDo(action string)
+    }
+
+    // Object represents real objects which proxy will delegate data
+    type Object struct {
+        action string
+    }
+
+    // ObjDo implements IObject interface and handel's all logic
+    func (obj *Object) ObjDo(action string) {
+        // Action behavior
+        fmt.Printf("I can, %s", action)
+    }
+
+    // ProxyObject represents proxy object with intercepts actions
+    type ProxyObject struct {
+        object *Object
+    }
+
+    // ObjDo are implemented IObject and intercept action before send in real Object
+    func (p *ProxyObject) ObjDo(action string) {
+        if p.object == nil {
+            p.object = new(Object)
+        }
+        if action == "Run" {
+            p.object.ObjDo(action) // Prints: I can, Run
+        }
+    }
+```
+
+* *Usage*
+
+More complex usage of proxy as example: User creates "Terminal" authorizes and PROXY send execution command to real Terminal object See [proxy/main.go](https://hxangel.gitbooks.io/go-patterns/content/structural/proxy/main.go) or [view in the Playground](https://play.golang.org/p/mnjKCMaOVE).
 
 
 
