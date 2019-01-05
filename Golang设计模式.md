@@ -11,7 +11,7 @@ Go语言惯用的设计和应用模式的精选集合。
 ### 构建器模式
 
 构建器模式将复杂对象的构造及其表示分开，以便相同的构造过程可以创建不同的表示。
-在Go中，通常使用配置结构来实现相同的行为，但是将结构体传递给构建器方法会使用样板`if cfg.Field != nil {...}`检查填充代码 。
+在Go中，通常使用配置结构来实现相同的行为，但是将结构体传递给构建器方法会使用样板`if cfg.Field != nil {...}`检查填充代码。
 * *Implementation*
 
 ```go
@@ -291,6 +291,112 @@ f(5)
 More complex usage of proxy as example: User creates "Terminal" authorizes and PROXY send execution command to real Terminal object See [proxy/main.go](https://hxangel.gitbooks.io/go-patterns/content/structural/proxy/main.go) or [view in the Playground](https://play.golang.org/p/mnjKCMaOVE).
 
 
+## 行为模式
+
+### 观察者模式
+
+在观察者模式允许类型实例“发布”事件到其他类型实例（观察者），观察者希望当特定事件发生时进行更新操作。
+
+* *Implementation*
+
+在长期运行的应用程序中 - 例如webservers-instances可以保留一组观察者，这些观察者将接收触发事件的通知。
+实现方式各不相同，但接口可用于制作标准观察者和通知者：
+
+```golang
+type (
+    // Event defines an indication of a point-in-time occurrence.
+    Event struct {
+        // Data in this case is a simple int, but the actual
+        // implementation would depend on the application.
+        Data int64
+    }
+
+    // Observer defines a standard interface for instances that wish to list for
+    // the occurrence of a specific event.
+    Observer interface {
+        // OnNotify allows an event to be "published" to interface implementations.
+        // In the "real world", error handling would likely be implemented.
+        OnNotify(Event)
+    }
+
+    // Notifier is the instance being observed. Publisher is perhaps another decent
+    // name, but naming things is hard.
+    Notifier interface {
+        // Register allows an instance to register itself to listen/observe
+        // events.
+        Register(Observer)
+        // Deregister allows an instance to remove itself from the collection
+        // of observers/listeners.
+        Deregister(Observer)
+        // Notify publishes new events to listeners. The method is not
+        // absolutely necessary, as each implementation could define this itself
+        // without losing functionality.
+        Notify(Event)
+    }
+)
+```
+
+* *Usage*
+
+For usage, see [observer/main.go](https://hxangel.gitbooks.io/go-patterns/behavioral/observer/main.go) or [view in the Playground](https://play.golang.org/p/cr8jEmDmw0).
+
+### 策略模式
+
+策略行为设计模式允许在运行时选择算法的行为。
+它定义算法，封装它们，并互换使用它们。
+
+* *Implementation*
+
+实现对整数进行操作的可互换运算符对象。
+
+```golang
+type Operator interface {
+    Apply(int, int) int
+}
+
+type Operation struct {
+    Operator Operator
+}
+
+func (o *Operation) Operate(leftValue, rightValue int) int {
+    return o.Operator.Apply(leftValue, rightValue)
+}
+```
+
+* *Usage*
+    * Addition Operator
+
+```golang
+type Addition struct{}
+
+func (Addition) Apply(lval, rval int) int {
+    return lval + rval
+}
+
+
+add := Operation{Addition{}}
+add.Operate(3, 5) // 8
+```
+
+    * Multiplication Operator
+
+```golang 
+type Multiplication struct{}
+
+func (Multiplication) Apply(lval, rval int) int {
+    return lval * rval
+}
+
+
+mult := Operation{Multiplication{}}
+
+mult.Operate(3, 5) // 15
+```
+
+* *经验法则*
+
+    * 除其粒度外，策略模式与模板模式类似。
+    * 策略模式允许您更改对象的内容，而装饰器模式改变皮肤。
 
 
 
