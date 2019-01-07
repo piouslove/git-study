@@ -399,6 +399,146 @@ mult.Operate(3, 5) // 15
     * 策略模式允许您更改对象的内容，而装饰器模式改变皮肤。
 
 
+## 同步模式
+
+### 信号量模式
+
+信号量是同步模式/原语，它在有限数量的资源上强加互斥。
+
+* *Implementation*
+
+```golang
+package semaphore
+
+var (
+    ErrNoTickets      = errors.New("semaphore: could not aquire semaphore")
+    ErrIllegalRelease = errors.New("semaphore: can't release the semaphore without acquiring it first")
+)
+
+// Interface contains the behavior of a semaphore that can be acquired and/or released.
+type Interface interface {
+    Acquire() error
+    Release() error
+}
+
+type implementation struct {
+    sem     chan struct{}
+    timeout time.Duration
+}
+
+func (s *implementation) Acquire() error {
+    select {
+    case s.sem <- struct{}{}:
+        return nil
+    case <-time.After(s.timeout):
+        return ErrNoTickets
+    }
+}
+
+func (s *implementation) Release() error {
+    select {
+    case _ = <-s.sem:
+        return nil
+    case <-time.After(s.timeout):
+        return ErrIllegalRelease
+    }
+
+    return nil
+}
+
+func New(tickets int, timeout time.Duration) Interface {
+    return &implementation{
+        sem:     make(chan struct{}, tickets),
+        timeout: timeout,
+    }
+}
+```
+
+* *Usage*
+
+    * 超时的信号量
+```golang
+tickets, timeout := 1, 3*time.Second
+s := semaphore.New(tickets, timeout)
+
+if err := s.Acquire(); err != nil {
+    panic(err)
+}
+
+// Do important work
+
+if err := s.Release(); err != nil {
+    panic(err)
+}
+```
+    * 没有超时的信号量（非阻塞）
+```golang
+tickets, timeout := 0, 0
+s := semaphore.New(tickets, timeout)
+
+if err := s.Acquire(); err != nil {
+    if err != semaphore.ErrNoTickets {
+        panic(err)
+    }
+
+    // No tickets left, can't work :(
+    os.Exit(1)
+}
+```
+
+
+## 并发模式
+
+### 生成器模式
+
+Generators yields a sequence of values one at a time.
+
+* *Implementation*
+
+```golang
+func Count(start int, end int) chan int {
+    ch := make(chan int)
+
+    go func(ch chan int) {
+        for i := start; i <= end ; i++ {
+            // Blocks on the operation
+            ch <- i
+        }
+
+        close(ch)
+    }(ch)
+
+    return ch
+}
+```
+
+* *Usage*
+
+```golang
+fmt.Println("No bottles of beer on the wall")
+
+for i := range Count(1, 99) {
+    fmt.Println("Pass it around, put one up,", i, "bottles of beer on the wall")
+    // Pass it around, put one up, 1 bottles of beer on the wall
+    // Pass it around, put one up, 2 bottles of beer on the wall
+    // ...
+    // Pass it around, put one up, 99 bottles of beer on the wall
+}
+
+fmt.Println(100, "bottles of beer on the wall")
+```
+
+### 并行模式
+
+并行性允许多个“作业”或任务同时和异步地运行。
+
+* *Implementation and Example*
+
+可以在[parallelism.go](https://hxangel.gitbooks.io/go-patterns/content/concurrency/parallelism.go)中找到实现和使用的示例。
+
+## 消息模式
+
+
 
 
 
