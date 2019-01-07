@@ -538,7 +538,165 @@ fmt.Println(100, "bottles of beer on the wall")
 
 ## 消息模式
 
+### Fan-In消息传递模式
 
+Fan-In是一种消息传递模式，用于为工作者（客户端：源，服务器：目标）之间的工作创建漏斗。
+我们可以使用Go channel 模拟 Fan-In。
+
+```golang
+// Merge different channels in one channel
+func Merge(cs ...<-chan int) <-chan int {
+    var wg sync.WaitGroup
+
+    out := make(chan int)
+
+    // Start an send goroutine for each input channel in cs. send
+    // copies values from c to out until c is closed, then calls wg.Done.
+    send := func(c <-chan int) {
+        for n := range c {
+            out <- n
+        }
+        wg.Done()
+    }
+
+    wg.Add(len(cs))
+    for _, c := range cs {
+        go send(c)
+    }
+
+    // Start a goroutine to close out once all the send goroutines are
+    // done.  This must start after the wg.Add call.
+    go func() {
+        wg.Wait()
+        close(out)
+    }()
+    return out
+}
+```
+
+该`Merge`函数通过为每个入站通道启动goroutine将一个通道列表转换为单个通道，该通道将值复制到唯一的出站通道。
+一旦启动了所有输出goroutine，`Merge`就会启动goroutine来关闭主通道。
+
+
+### Fan-Out消息传递模式
+
+Fan-Out是一种消息传递模式，用于在工作者之间分配工作（生产者：来源，消费者：目的地）。
+我们可以使用Go channel 模拟 Fan-Out。
+
+```golang
+// Split a channel into n channels that receive messages in a round-robin fashion.
+func Split(ch <-chan int, n int) []<-chan int {
+    cs := make([]chan int)
+    for i := 0; i < n; i++ {
+        cs = append(cs, make(chan int))
+    }
+
+    // Distributes the work in a round robin fashion among the stated number
+    // of channels until the main channel has been closed. In that case, close
+    // all channels and return.
+    distributeToChannels := func(ch <-chan int, cs []chan<- int) {
+        // Close every channel when the execution ends.
+        defer func(cs []chan<- int) {
+            for _, c := range cs {
+                close(c)
+            }
+        }(cs)
+
+        for {
+            for _, c := range cs {
+                select {
+                case val, ok := <-ch:
+                    if !ok {
+                        return
+                    }
+
+                    c <- val
+                }
+            }
+        }
+    }
+
+    go distributeToChannels(ch, cs)
+
+    return cs
+}
+```
+
+`Split`函数通过使用goroutine以循环方式将接收到的值复制到列表中的channel，将单个通道转换为通道列表。
+
+### 发布和订阅消息传递模式
+
+Publish-Subscribe是一种消息传递模式，用于在不同组件之间传递消息，而这些组件不了解彼此的身份。
+
+它类似于Observer行为设计模式。Observer和Publish-Subscribe的基本设计原则是解耦那些对来自‘线人’（观察者或发布者）的`Event Messages`有兴趣并获取通知的方式。这意味着您不必将消息编程以便直接发送给特定的接收器。
+
+为实现此目的，称为“消息代理”或“事件总线”的中介接收已发布的消息，然后将它们路由到订阅者。
+
+有三个组件消息，主题，用户。
+
+```golang
+type Message struct {
+    // Contents
+}
+
+
+type Subscription struct {
+    ch chan<- Message
+
+    Inbox chan Message
+}
+
+func (s *Subscription) Publish(msg Message) error {
+    if _, ok := <-s.ch; !ok {
+        return errors.New("Topic has been closed")
+    }
+
+    s.ch <- msg
+
+    return nil
+}
+```
+
+```golang
+type Topic struct {
+    Subscribers    []Session
+    MessageHistory []Message
+}
+
+func (t *Topic) Subscribe(uid uint64) (Subscription, error) {
+    // Get session and create one if it's the first
+
+    // Add session to the Topic & MessageHistory
+
+    // Create a subscription
+}
+
+func (t *Topic) Unsubscribe(Subscription) error {
+    // Implementation
+}
+
+func (t *Topic) Delete() error {
+    // Implementation
+}
+```
+
+```golang
+type User struct {
+    ID uint64
+    Name string
+}
+
+type Session struct {
+    User User
+    Timestamp time.Time
+}
+```
+
+* *改进*
+
+通过利用无堆叠的goroutine，可以以并行方式发布事件。
+
+通过使用缓冲的收件箱处理订阅者意外掉队的情况并在收件箱已满后停止发送事件，可以提高性能。
 
 
 
