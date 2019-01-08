@@ -789,6 +789,146 @@ func Breaker(c Circuit, failureThreshold uint32) Circuit {
 
 [sony/gobreaker](https://github.com/sony/gobreaker)是针对实际用例的经过充分测试且直观的断路器实现。
 
+## 剖析模式
+
+### 时间功能
+
+在优化代码时，有时需要快速而肮脏的时间测量，而不是利用分析器工具/框架来验证假设。
+
+可以通过利用`time`包和`defer`语句来执行时间测量。
+
+* *Implementation*
+
+```golang
+package profile
+
+import (
+    "time"
+    "log"
+)
+
+func Duration(invocation time.Time, name string) {
+    elapsed := time.Since(invocation)
+
+    log.Printf("%s lasted %s", name, elapsed)
+}
+```
+
+* *Usage*
+
+```golang
+func BigIntFactorial(x big.Int) *big.Int {
+    // Arguments to a defer statement is immediately evaluated and stored.
+    // The deferred function receives the pre-evaluated values when its invoked.
+    defer profile.Duration(time.Now(), "IntFactorial")
+
+    y := big.NewInt(1)
+    for one := big.NewInt(1); x.Sign() > 0; x.Sub(x, one) {
+        y.Mul(y, x)
+    }
+
+    return x.Set(y)
+}
+```
+
+## 谚语模式
+
+### 函数选项
+
+函数选项是在Go中实现干净/清晰的API的方法。作为函数实现的选项设置该选项的状态。
+
+* *Implementation*
+
+    * Options
+```golang
+package file
+
+type Options struct {
+    UID         int
+    GID         int
+    Flags       int
+    Contents    string
+    Permissions os.FileMode
+}
+
+type Option func(*Options)
+
+func UID(userID int) Option {
+    return func(args *Options) {
+        args.UID = userID
+    }
+}
+
+func GID(groupID int) Option {
+    return func(args *Options) {
+        args.GID = groupID
+    }
+}
+
+func Contents(c string) Option {
+    return func(args *Options) {
+        args.Contents = c
+    }
+}
+
+func Permissions(perms os.FileMode) Option {
+    return func(args *Options) {
+        args.Permissions = perms
+    }
+}
+```
+
+    * Constructor
+
+```golang
+package file
+
+func New(filepath string, setters ...Option) error {
+    // Default Options
+    args := &Options{
+        UID:         os.Getuid(),
+        GID:         os.Getgid(),
+        Contents:    "",
+        Permissions: 0666,
+        Flags:       os.O_CREATE | os.O_EXCL | os.O_WRONLY,
+    }
+
+    for _, setter := range setters {
+        setter(args)
+    }
+
+    f, err := os.OpenFile(filepath, args.Flags, args.Permissions)
+    if err != nil {
+        return err
+    } else {
+        defer f.Close()
+    }
+
+    if _, err := f.WriteString(args.Contents); err != nil {
+        return err
+    }
+
+    return f.Chown(args.UID, args.GID)
+}
+```
+
+* *Usage*
+
+```golang
+emptyFile, err := file.New("/tmp/empty.txt")
+if err != nil {
+    panic(err)
+}
+
+fillerFile, err := file.New("/tmp/file.txt", file.UID(1000), file.Contents("Lorem Ipsum Dolor Amet"))
+if err != nil {
+    panic(err)
+}
+```
+
+
+
+
 
 
 
